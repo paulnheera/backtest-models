@@ -1,0 +1,16 @@
+---
+title: "Quantitative Report"
+author: "Paul Nheera"
+date: "16 June 2017"
+output: html_document
+---
+
+```{r echo=FALSE}
+library(knitr)
+library(rmarkdown)
+read_chunk('C:\\Users\\Paul Nheera\\Documents\\repos\\backtest_models\\Quants_Report.R')
+```
+
+```{r First, echo=FALSE}
+<<performance_chart>>
+```
