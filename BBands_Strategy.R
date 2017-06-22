@@ -29,7 +29,7 @@ portfolio[startpos-1,"Total"] = sum(portfolio[startpos-1,1:2])
 
 
 #The Loop - Go Through Each Bar:
-for(i in (startpos+1):nrow(px)){ #(Currently with one day lag in execution.)
+for(i in (startpos):nrow(px)){ #(Currently with one day lag in execution.)
   
   #carry over cash:
   portfolio[i,"Cash"] = portfolio[i-1,"Cash"]
