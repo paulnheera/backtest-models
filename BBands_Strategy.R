@@ -73,4 +73,13 @@ hold.ret = ROC(px[paste0(startDate,"::"),4])
 strat.ret = ROC(portfolio[paste0(startDate,"::"),"Total"])
 
 ret = merge.xts(hold.ret,strat.ret)
-chart.CumReturns(ret,col=c("green","blue"))
+
+main.text = paste0(ticker)
+xlabel = "Date"
+ylabel = "Cummulative Return"
+
+chart.CumReturns(ret,col=c("green","blue"),main=main.text,
+                 xlab = xlabel, ylab=ylabel)
+legend("topleft",legend = c("Buy and Hold","Strategy"),lty=1,
+       col = c("green","blue"),cex=0.8,bty="n")
+
