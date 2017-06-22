@@ -4,7 +4,8 @@ library(quantmod)
 library(PerformanceAnalytics)
 
 ticker = "JSE:DBXUS"
-getSymbols.google(ticker, env=globalenv())
+if(!exists(ticker)) getSymbols.google(ticker, env=globalenv())
+
 
 px = get(ticker) 
 
