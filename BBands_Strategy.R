@@ -3,7 +3,7 @@
 library(quantmod)
 library(PerformanceAnalytics)
 
-ticker = "JSE:STX40"
+ticker = "JSE:DBXUS"
 getSymbols.google(ticker, env=globalenv())
 
 px = get(ticker) 
@@ -18,14 +18,13 @@ no.Shares[,] =  0
 colnames(no.Shares) = ticker
 
 #Calculate Bollinger Bands:
-Bbands = BBands(px[,4],n=20,maType = "SMA", sd=2)
+n = 20
+Bbands = BBands(px[,4],n=n,maType = "SMA", sd=2)
 
-startpos = 21
+startpos = n + 1
 portfolio[startpos-1,"Cash"] = 10000
 portfolio[startpos-1,"Equity"] = 0
 portfolio[startpos-1,"Total"] = sum(portfolio[startpos-1,1:2])
-
-
 
 
 #The Loop - Go Through Each Bar:
