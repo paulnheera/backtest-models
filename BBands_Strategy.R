@@ -3,11 +3,14 @@
 library(quantmod)
 library(PerformanceAnalytics)
 
-ticker = "JSE:DBXUS"
+ticker = "JSE:KIO"
 if(!exists(ticker)) getSymbols.google(ticker, env=globalenv())
 
 
-px = get(ticker) 
+px = get(ticker)
+
+#Change from cents to rands:
+px[,1:4] = px[,1:4]/100
 
 portfolio = px
 portfolio[,] = NA
