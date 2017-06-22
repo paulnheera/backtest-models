@@ -68,7 +68,7 @@ for(i in (startpos):nrow(px)){ #(Currently with one day lag in execution.)
   #Move on to the next bar:
 }
 
-startDate = "2007-01-29"
+startDate = index(portfolio)[startpos-1]
 hold.ret = ROC(px[paste0(startDate,"::"),4])
 strat.ret = ROC(portfolio[paste0(startDate,"::"),"Total"])
 
