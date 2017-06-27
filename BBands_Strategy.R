@@ -4,6 +4,7 @@ library(quantmod)
 library(PerformanceAnalytics)
 
 cost = 0.0064
+cashRate = 0.0525 #per annum (There are 250 Interest accrual days in a Year)
 ticker = "JSE:STX40"
 if(!exists(ticker)) getSymbols.google(ticker, env=globalenv())
 
@@ -36,7 +37,7 @@ portfolio[startpos-1,"Total"] = sum(portfolio[startpos-1,1:2])
 for(i in (startpos):nrow(px)){ #(Currently with one day lag in execution.)
   
   #carry over cash:
-  portfolio[i,"Cash"] = portfolio[i-1,"Cash"]
+  portfolio[i,"Cash"] = portfolio[i-1,"Cash"]*(1 + ((1+cashRate)^(1/250)-1) )
   no.Shares[i] = no.Shares[i-1]
   
   #Check current positions 
