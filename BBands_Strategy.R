@@ -3,7 +3,8 @@
 library(quantmod)
 library(PerformanceAnalytics)
 
-ticker = "JSE:KIO"
+cost = 0.0064
+ticker = "JSE:STX40"
 if(!exists(ticker)) getSymbols.google(ticker, env=globalenv())
 
 
@@ -45,7 +46,7 @@ for(i in (startpos):nrow(px)){ #(Currently with one day lag in execution.)
       #Buy Shares:
       no.Shares[i] = as.integer(portfolio[i,"Cash"]/px[i,4]) #NOTE: Change the 4 to Close.
       portfolio[i,"Equity"] = no.Shares[i]*px[i,4]
-      portfolio[i,"Cash"] = portfolio[i,"Cash"] - portfolio[i,"Equity"]
+      portfolio[i,"Cash"] = portfolio[i,"Cash"] - (portfolio[i,"Equity"]*(1+cost))
       portfolio[i,"Total"] = portfolio[i,"Equity"] + portfolio[i,"Cash"]
     }else{
       no.Shares[i] = no.Shares[i-1]
@@ -58,7 +59,7 @@ for(i in (startpos):nrow(px)){ #(Currently with one day lag in execution.)
     if(Bbands[i-1,"pctB"] > 1){
       #Sell Shares:
       portfolio[i,"Equity"] = no.Shares[i]*px[i,4]
-      portfolio[i,"Cash"] = portfolio[i,"Cash"] + portfolio[i,"Equity"]
+      portfolio[i,"Cash"] = portfolio[i,"Cash"] + (portfolio[i,"Equity"]*(1-cost))
       portfolio[i,"Equity"] = 0
       portfolio[i,"Total"] = portfolio[i,"Equity"] + portfolio[i,"Cash"]
       no.Shares[i] = 0
