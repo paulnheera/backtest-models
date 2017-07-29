@@ -14,8 +14,9 @@ account <- R6Class("account",
     Trades = NULL,
     #Leverage:
     leverage = 100, #times
-    
-    #Trades = list(),
+    #Risk Management:
+    riskLimit = 0.05,
+    stopLoss = 10, #pips
     
     initialize = function(Balance){
       self$Balance = Balance
@@ -28,6 +29,33 @@ account <- R6Class("account",
                           price = numeric(),sl = numeric(),
                           tp = numeric(),PnL = numeric(),
                           status = character(),stringsAsFactors=FALSE)
+    },
+    
+    createOrderEvent = function(signalEvent,dataHandler){
+      time = signalEvent$date
+      symbol = signalEvent$symbol
+      type = signalEvent$type
+      
+      #Risk Limit is set at the opening of the Account.
+      riskAmount = self$Balance * self$riskLimit
+      
+      #Stop Loss can either be set to a standar pip ammount. or Calculated from the
+      # ATR or other stop loss methodologies.
+      size = riskAmount/(self$stopLoss * 10)
+      
+      if(signalEvent$type == 'LONG'){
+        price = dataHandler[which(dataHandler$Symbol == 'EURUSD'),]$Buy
+        sl = price - self$stopLoss/10000
+        tp = price + (self$stopLoss/10000)*2
+      }else{
+        price = dataHandler[which(dataHandler$Symbol == 'EURUSD'),]$Sell
+        sl = price + self$stopLoss/10000
+        tp = price - (self$stopLoss/10000)*2
+      }
+      
+      #IMPROVE: Just add extra elements to signalEvent list.
+      orderEvent = list(time = time,symbol = symbol,type = type,
+                        size = size, price = price, sl = sl,tp = tp )
     },
     
     update = function(orderEvent,dataHandler){
@@ -66,21 +94,17 @@ account <- R6Class("account",
         self$Equity = self$Balance + self$PnL
       }
     }
+    
   )
 )
 
 
-
+#Test:
 Account <- Account$new(500)
 Account$Balance
 Account$Equity
 Account$FreeMargin
 Account$UsedMargin
-Account$SL
-Account$calc_market_order('EURUSD','Short')
-
-
-
 
 ##Notes:
 # Make the Trades data.frame an Active object. So it updates the Account fields.
