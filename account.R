@@ -44,13 +44,13 @@ account <- R6Class("account",
       size = riskAmount/(self$stopLoss * 10)
       
       if(signalEvent$type == 'LONG'){
-        price = dataHandler[which(dataHandler$Symbol == 'EURUSD'),]$Buy
-        sl = price - self$stopLoss/10000
-        tp = price + (self$stopLoss/10000)*2
+        price = dataHandler[which(dataHandler$symbol == 'EURUSD'),]$buy
+        sl = as.numeric(price) - self$stopLoss/10000
+        tp = as.numeric(price) + (self$stopLoss/10000)*2
       }else{
-        price = dataHandler[which(dataHandler$Symbol == 'EURUSD'),]$Sell
-        sl = price + self$stopLoss/10000
-        tp = price - (self$stopLoss/10000)*2
+        price = dataHandler[which(dataHandler$symbol == 'EURUSD'),]$sell
+        sl = as.numeric(price) + self$stopLoss/10000
+        tp = as.numeric(price) - (self$stopLoss/10000)*2
       }
       
       #IMPROVE: Just add extra elements to signalEvent list.
@@ -61,7 +61,7 @@ account <- R6Class("account",
     update = function(orderEvent,dataHandler){
       if(substr(orderEvent$symbol,4,6)=="USD"){
         print('Base Currency is USD')
-        margin = (100000*orderEvent$size*orderEvent$price)/self$leverage
+        margin = (100000*as.numeric(orderEvent$size)*as.numeric(orderEvent$price))/self$leverage
       }else{
         #Do Nothing for now!
       }
@@ -100,11 +100,21 @@ account <- R6Class("account",
 
 
 #Test:
-Account <- Account$new(500)
+Account <- account$new(500)
 Account$Balance
 Account$Equity
 Account$FreeMargin
 Account$UsedMargin
+Account$Trades
+
+orderEvent = Account$createOrderEvent(signalEvent,dataHandler)
+Account$update(orderEvent,dataHandler)
+
+Account$Balance
+Account$Equity
+Account$FreeMargin
+Account$UsedMargin
+Account$Trades
 
 ##Notes:
 # Make the Trades data.frame an Active object. So it updates the Account fields.
