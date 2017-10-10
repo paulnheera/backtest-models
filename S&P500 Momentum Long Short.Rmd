@@ -10,11 +10,14 @@ library(quantmod)
 library(PerformanceAnalytics)
 library(rvest)
 library(readxl)
+library(dygraphs)
 ```
 
 
 ```{r}
-SP500 = as.matrix(read_excel("H:/repos/backtest_models/SP500.xlsx"))
+#Clean Data:
+
+SP500 = as.matrix(read_csv("H:/repos/backtest_models/SP500.csv"))
 SP500 = SP500[,-which(colSums(is.na(SP500)) ==nrow(SP500))]
 SP500 = SP500[-1,]
 SP500 = SP500[,-2]
@@ -22,7 +25,22 @@ SP500 = SP500[,-2]
 SP500[which(SP500=="#N/A N/A",arr.ind = TRUE)] = NA
 
 SP500 = as.xts(SP500[,-1],order.by = as.POSIXct(SP500[,1]))
-SP500 = as.matrix(SP500)
-SP500[,] = apply(SP500,2,as.numeric)
+#SP500 = as.matrix(SP500)
+#SP500[,] = apply(SP500,2,as.numeric)
+class(SP500) = "numeric"
+```
+
+
+```{r}
+portfolios = MoM_strat(SP500,6,1,1,"2007-05-31")
+port1 = runBacktest(portfolios[,,1],SP500,100000,cashRate = 0,Cost=0)
+port5 = runBacktest(portfolios[,,5],SP500,100000,cashRate = 0,Cost=0)
+
+comb = merge.xts(as.xts(port1[,"Total"]),as.xts(port5[,"Total"])); colnames(comb) = c("Long","Short")
+
+dygraph(comb)
+
+
 
 ```
+
