@@ -32,11 +32,18 @@ MoM_strat <- function(in.close,J,H,R,startDate,weights = "Equal Weights"){
   ts.Dates = row.names(in.close)
   tickers = colnames(in.close)
   
-  #Periods:
-  j = 21*J    # Formation Period.
-  h = 21*H    # Holding Period.
-  r = 21*R    # Rebalancing frequency. Should be the same as J by default.
+  #Periodicity:
+  if(periodicity(in.close)$scale=="monthly"){
+    j = J
+    h = H
+    r = R
+  }else if(periodicity(in.close)$scale=="daily"){
+    j = 21*J    # Formation Period.
+    h = 21*H    # Holding Period.
+    r = 21*R    # Rebalancing frequency. Should be the same as J by default.
+  }
   
+
   #Start Date:
   ts.Dates = as.Date(ts.Dates)
   startPos = min(which(ts.Dates >= startDate))
