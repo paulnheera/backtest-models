@@ -17,10 +17,13 @@
 # R is the rebalncing frequency. (In Months)
 # StartDate is the Date on which the backtest starts.
 
-library(quantmod)
-source("~/repos/backtest_models/google_import.R")
+#library(quantmod)
+#source("~/repos/backtest_models/google_import.R")
 
 MoM_strat <- function(in.close,J,H,R,startDate,weights = "Equal Weights"){
+  
+  #Object Type Check:
+  in.close = as.matrix(in.close)
   
   #Remove Public Holidays:
   PH = (which(rowSums(ROC(in.close),na.rm = TRUE) == 0))[-1]

@@ -14,6 +14,10 @@
 
 runBacktest <- function(in.wght,in.close,in.startCapital,cashRate=0.05,Cost=0.0064)
 {
+    
+    #Object Class:
+    in.close = as.matrix(in.close)
+  
     #Match in.close to in.wght:
     in.close = in.close[row.names(in.wght),]
   
