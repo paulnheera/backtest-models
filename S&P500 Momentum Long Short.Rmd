@@ -39,22 +39,28 @@ port5 = runBacktest(portfolios[,,5],SP500,100000,cashRate = 0,Cost=0)
 
 comb = merge.xts(as.xts(port1[,"Total"]),as.xts(port5[,"Total"])); colnames(comb) = c("Long","Short")
 
+#Monthly Returns of the Two Portfolios:
 ret1 = ROC(port1[,"Total",drop=FALSE])
 ret5 = ROC(port5[,"Total",drop=FALSE])
 
+#Create Long and Short Portfolio Monthly Returns:
 long.ret = ret1
 short.ret = -ret5
 
+#Cummulative Returns for the Long and Short Portfolio:
 long = long.ret
 short = short.ret
 
 long[!is.na(long)] = cumprod(1+na.trim(long.ret))
 short[!is.na(short)] = cumprod(1+na.trim(short.ret))
 
+#Combine the long and short porfolio:
 LongShort = long+short
 
 LongShort.ret = ROC(LongShort)
 
+
+#Chart Output:
 charts.PerformanceSummary(LongShort.ret)
 ```
 
