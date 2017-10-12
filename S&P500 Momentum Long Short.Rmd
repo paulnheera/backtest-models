@@ -20,7 +20,7 @@ source("portfolio_backtest.R")
 ```{r}
 #Clean Data:
 
-SP500 = as.matrix(read_csv("SP500.csv"))
+SP500 = as.matrix(read_csv("SP500.TRR.csv"))
 SP500 = SP500[,-which(colSums(is.na(SP500)) ==nrow(SP500))]
 
 SP500[which(SP500=="#N/A N/A",arr.ind = TRUE)] = NA
@@ -58,7 +58,6 @@ short[!is.na(short)] = cumprod(1+na.trim(short.ret))
 LongShort = long+short
 
 LongShort.ret = ROC(LongShort)
-
 
 #Chart Output:
 charts.PerformanceSummary(LongShort.ret)
