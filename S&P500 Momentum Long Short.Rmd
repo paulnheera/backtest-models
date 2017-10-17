@@ -32,21 +32,65 @@ storage.mode(SP500) = "numeric"
 ```
 
 
+#### Input Parameters:
 ```{r}
-portfolios = MoM_strat(SP500,3,1,1,"2007-05-31")
+Momentum.period = 3 # Months
+Holding.period = 1 # Months
+Rebalancing.period = 1 #Months
+```
+
+```{r}
+portfolios = MoM_strat(SP500,Momentum.period,Holding.period ,Rebalancing.period,"2007-05-31")
 port1 = runBacktest(portfolios[,,1],SP500,100000,cashRate = 0,Cost=0)
+port2 = runBacktest(portfolios[,,2],SP500,100000,cashRate = 0,Cost=0)
+port3 = runBacktest(portfolios[,,3],SP500,100000,cashRate = 0,Cost=0)
+port4 = runBacktest(portfolios[,,4],SP500,100000,cashRate = 0,Cost=0)
 port5 = runBacktest(portfolios[,,5],SP500,100000,cashRate = 0,Cost=0)
 
 comb = merge.xts(as.xts(port1[,"Total"]),as.xts(port5[,"Total"])); colnames(comb) = c("Long","Short")
 
 #Monthly Returns of the Two Portfolios:
-ret1 = ROC(port1[,"Total",drop=FALSE])
-ret5 = ROC(port5[,"Total",drop=FALSE])
+ret1 = ROC(port1[,"Total",drop=FALSE]); colnames(ret1) = '1st Quantile'
+ret2 = ROC(port2[,"Total",drop=FALSE]); colnames(ret2) = '2nd Quantile'
+ret3 = ROC(port3[,"Total",drop=FALSE]); colnames(ret3) = '3rd Quantile'
+ret4 = ROC(port4[,"Total",drop=FALSE]); colnames(ret4) = '4th Quantile'
+ret5 = ROC(port5[,"Total",drop=FALSE]); colnames(ret5) = '5th Quantile'
 
 #Create Long and Short Portfolio Monthly Returns:
 long.ret = ret1
 short.ret = -ret5
+```
 
+#### Quantiles
+```{r}
+charts.PerformanceSummary(cbind(ret1,ret2,ret3,ret4,ret5))
+table.AnnualizedReturns(cbind(ret1,ret2,ret3,ret4,ret5))
+```
+
+
+#### 1st Quantile vs 5th Quantile
+```{r}
+charts.PerformanceSummary(cbind(ret1,ret5),colorset=rich6equal)
+table.AnnualizedReturns(cbind(ret1,ret5))
+
+table.CalendarReturns(cbind(ret1))
+table.CalendarReturns(cbind(ret5))
+```
+
+#### Long-Short 50/50
+```{r}
+LongShort.ret = 0.5*ret1 -0.5*ret5
+
+charts.PerformanceSummary(LongShort.ret)
+
+table.CalendarReturns(LongShort.ret)
+table.AnnualizedReturns(LongShort.ret)
+```
+
+
+
+
+```{r}
 #Cummulative Returns for the Long and Short Portfolio:
 long = long.ret
 short = short.ret
