@@ -22,6 +22,9 @@
 
 MoM_strat <- function(in.close,J,H,R,startDate,weights = "Equal Weights"){
   
+  ##IMPROVE: Make sure last values are carried forward!!
+  in.close = na.locf(in.close)
+  
   #Object Type Check:
   in.close = as.matrix(in.close)
   

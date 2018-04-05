@@ -15,6 +15,9 @@
 runBacktest <- function(in.wght,in.close,in.startCapital,cashRate=0.05,Cost=0.0064)
 {
     
+  ##IMPROVE: Make sure last values are carried forward for in.close!!
+  in.close = na.locf(in.close)
+  
     #Object Class:
     in.close = as.matrix(in.close)
   
