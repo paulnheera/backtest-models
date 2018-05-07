@@ -31,13 +31,13 @@ for(j in J_vector) for(h in H_vector){
   ret = ROC(port_navs[,"Total"])
   
   #Ann Return:
-  ann_returns[h,j] = Return.annualized(ret)
+  ann_returns[h/3,j/3] = Return.annualized(ret)
   
   #Std_Dev:
-  std_devs[h,j] = StdDev.annualized(ret,scale=252)
+  std_devs[h/3,j/3] = StdDev.annualized(ret,scale=252)
   
   #Shape Ratio:
-  sharpe_ratios[h,j] = SharpeRatio.annualized(ret)
+  sharpe_ratios[h/3,j/3] = SharpeRatio.annualized(ret)
   
 }
 
