@@ -4,6 +4,16 @@
 
 library(shiny)
 library(quantmod)
+library(gridExtra)
+library(grid)
+source("~/repos/Google Finance Database/Functions/get2D.R")
+source("~/repos/backtest_models/momentum_screen.R")
+
+# ---- Load Data ----
+DailyPrice <- readRDS("~/repos/Google Finance Database/DailyPrice.rds")
+
+Adjusted = get2D(DailyPrice,"Adjusted")
+Adjusted = as.xts(Adjusted[,-1],order.by = Adjusted$Date)
 
 # Define UI for app that draws screen table ----
 
@@ -56,7 +66,13 @@ server <- function(input, output) {
     
     J <- as.numeric(input$period)
     
-    chartSeries(xts::last(Close[,1],J*21))
+    Q1 = momentum_screen(Adjusted,J)
+    g1 = tableGrob(Q1[1:(nrow(Q1)/2),])
+    g2 = tableGrob(Q1[(nrow(Q1)/2)+1:nrow(Q1),])
+    
+    
+    grid.arrange(g1,g2,ncol=2)
+    #chartSeries(xts::last(Close[,1],J*21))
     
   })
   
