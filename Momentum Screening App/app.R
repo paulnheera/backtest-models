@@ -6,11 +6,13 @@ library(shiny)
 library(quantmod)
 library(gridExtra)
 library(grid)
-source("~/repos/Google Finance Database/Functions/get2D.R")
+library(DT)
+source("~/repos/Google-Finance-Database/Functions/get2D.R")
 source("~/repos/backtest_models/momentum_screen.R")
 
 # ---- Load Data ----
-DailyPrice <- readRDS("~/repos/Google Finance Database/DailyPrice.rds")
+DailyPrice <- readRDS("~/repos/Google-Finance-Database/DailyPrice.rds")
+MarketCap <- readRDS("~/repos/Google-Finance-Database/Market_Cap.rds")
 
 Adjusted = get2D(DailyPrice,"Adjusted")
 Adjusted = as.xts(Adjusted[,-1],order.by = Adjusted$Date)
@@ -31,8 +33,8 @@ ui <- fluidPage(
       # Input: Slider for the number of bins ----
       selectInput(inputId = "period",
                   label = "Formation Period",
-                  choices = list("Choice 1" = 3, "Choice 2" = 6,
-                                 "Choice 3" = 9, "Choice 4" = 12),
+                  choices = list("3 Months" = 3, "6 Months" = 6,
+                                 "9 Months" = 9, "12 Months" = 12),
                   selected = 3
                   )
       
@@ -42,7 +44,7 @@ ui <- fluidPage(
     mainPanel(
       
       # Output: Table ----
-      plotOutput(outputId = "Table")
+      dataTableOutput(outputId = "Table")
       
     )
   )
@@ -62,17 +64,23 @@ server <- function(input, output) {
   # 1. It is "reactive" and therefore should be automatically
   #    re-executed when inputs (input$bins) change
   # 2. Its output type is a plot
-  output$Table <- renderPlot({
+  output$Table <- renderDataTable({
     
     J <- as.numeric(input$period)
     
     Q1 = momentum_screen(Adjusted,J)
+    
+    #Join Market Cap:
+    Q1 = Q1 %>% 
+      left_join(MarketCap,by="Stock")
+    
     g1 = tableGrob(Q1[1:(nrow(Q1)/2),])
-    g2 = tableGrob(Q1[(nrow(Q1)/2)+1:nrow(Q1),])
+    g2 = tableGrob(Q1[(nrow(Q1)/2+1):nrow(Q1),])
     
     
-    grid.arrange(g1,g2,ncol=2)
+    #grid.arrange(g1,g2,ncol=2)
     #chartSeries(xts::last(Close[,1],J*21))
+    datatable(Q1)
     
   })
   
