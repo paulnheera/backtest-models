@@ -14,8 +14,8 @@ source("~/repos/backtest_models/momentum_screen.R")
 DailyPrice <- readRDS("~/repos/Google-Finance-Database/DailyPrice.rds")
 MarketCap <- readRDS("~/repos/Google-Finance-Database/Market_Cap.rds")
 
-Adjusted = get2D(DailyPrice,"Adjusted")
-Adjusted = as.xts(Adjusted[,-1],order.by = Adjusted$Date)
+Close = get2D(DailyPrice,"Close")
+Close = as.xts(Close[,-1],order.by = Close$Date)
 
 # Define UI for app that draws screen table ----
 
@@ -68,11 +68,17 @@ server <- function(input, output) {
     
     J <- as.numeric(input$period)
     
-    Q1 = momentum_screen(Adjusted,J)
+    Q1 = momentum_screen(Close,J)
     
     #Join Market Cap:
     Q1 = Q1 %>% 
       left_join(MarketCap,by="Stock")
+    
+    Q1$MktCap = round(as.numeric(gsub("B","",Q1$MktCap)),digits = 3)
+    Q1$Momentum = round(Q1$Momentum,digits = 4)
+    
+    
+    colnames(Q1) = c("Stock","Momentum", "Market Cap (Billions)")
     
     g1 = tableGrob(Q1[1:(nrow(Q1)/2),])
     g2 = tableGrob(Q1[(nrow(Q1)/2+1):nrow(Q1),])
@@ -80,7 +86,8 @@ server <- function(input, output) {
     
     #grid.arrange(g1,g2,ncol=2)
     #chartSeries(xts::last(Close[,1],J*21))
-    datatable(Q1)
+    datatable(Q1) %>% 
+      formatRound(columns = c('Momentum','Market Cap (Billions)'),digits=4)
     
   })
   
