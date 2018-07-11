@@ -79,11 +79,16 @@ runBacktest <- function(in.wght,in.close,in.startCapital,cashRate=0.05,Cost=0.00
       {
         ## "Improve: Add transaction Costs."
         ## "Note: Add cost to the price of each security instead. i.e price*(1+Cost)"
-        totalCost = sum((as.integer((in.wght[k,uni.pos]*port.out[k,"Total"])/in.close[k,uni.pos]) - num.shares[k,uni.pos])*in.close[k,uni.pos])*Cost
+        #totalCost = sum((as.integer((in.wght[k,uni.pos]*port.out[k,"Total"])/in.close[k,uni.pos]) - num.shares[k,uni.pos])*in.close[k,uni.pos])*Cost
         
-        #Execute Changes:
-        num.shares[k,uni.pos] = num.shares[k,uni.pos] + (as.integer((in.wght[k,uni.pos]*port.out[k,"Total"])/in.close[k,uni.pos]) - num.shares[k,uni.pos])
+        ## "Improve: Keep track of transaction costs in transactions cost time series:
         
+        #Execute Changes: Number of Shares
+        num.shares[k,uni.pos] = num.shares[k,uni.pos] + ( as.integer((in.wght[k,uni.pos]*port.out[k,"Total"])/(in.close[k,uni.pos]*(1+Cost)) ) - num.shares[k,uni.pos])
+        
+        #Costs:
+        totalCost = sum(in.close[k,uni.pos]*num.shares[k,uni.pos]*Cost)
+         
         #Result from changes
         port.out[k, "Equity"] = sum( (num.shares[k,uni.pos]*in.close[k,uni.pos]) ,na.rm = TRUE)
         port.out[k,"Total"] =  port.out[k,"Total"] - totalCost
