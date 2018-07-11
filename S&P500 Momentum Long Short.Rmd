@@ -2,45 +2,68 @@
 title: "S&P500 Momentum Long/Short"
 author: "Paul Nheera"
 date: "09 October 2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
-```{r}
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 library(quantmod)
 library(PerformanceAnalytics)
 library(rvest)
 library(readxl)
 library(readr)
 library(dygraphs)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
 
 source("momentum_strat.R")
 source("portfolio_backtest.R")
 ```
 
-```{r}
-#Clean Data:
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#Load Data:
+SPX_2D <- readRDS("~/repos/backtest_models/SPX_2D.rds")
+SP500 = SPX_2D
 
-SP500 = as.matrix(read_csv("SP500.TRR.csv"))
-SP500 = SP500[,-which(colSums(is.na(SP500)) ==nrow(SP500))]
-
-SP500[which(SP500=="#N/A N/A",arr.ind = TRUE)] = NA
-
-SP500 = as.xts(SP500[,-1],order.by = as.POSIXct(SP500[,1]))
-#SP500 = as.matrix(SP500)
-#SP500[,] = apply(SP500,2,as.numeric)
-storage.mode(SP500) = "numeric"
 ```
 
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+# #Clean Data:
+# 
+# SP500 = as.matrix(read_csv("SP500.TRR.csv"))
+# SP500 = SP500[,-which(colSums(is.na(SP500)) ==nrow(SP500))]
+# 
+# SP500[which(SP500=="#N/A N/A",arr.ind = TRUE)] = NA
+# 
+# SP500 = as.xts(SP500[,-1],order.by = as.POSIXct(SP500[,1]))
+# #SP500 = as.matrix(SP500)
+# #SP500[,] = apply(SP500,2,as.numeric)
+#storage.mode(SP500) = "numeric"
+```
 
 #### Input Parameters:
-```{r}
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 Momentum.period = 3 # Months
 Holding.period = 1 # Months
 Rebalancing.period = 1 #Months
 ```
 
-```{r}
+Momentum Period: `r Momentum.period` month(s)
+\newline
+Holding period: = `r Holding.period` month(s)
+\newline
+Rebalancing period: = `r Rebalancing.period` month(s)
+\newline
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#Portfolio Weights:
 portfolios = MoM_strat(SP500,Momentum.period,Holding.period ,Rebalancing.period,"2007-05-31")
+
+#Run The Backtest on the different quantile portfolios:
 port1 = runBacktest(portfolios[,,1],SP500,100000,cashRate = 0,Cost=0)
 port2 = runBacktest(portfolios[,,2],SP500,100000,cashRate = 0,Cost=0)
 port3 = runBacktest(portfolios[,,3],SP500,100000,cashRate = 0,Cost=0)
@@ -49,12 +72,26 @@ port5 = runBacktest(portfolios[,,5],SP500,100000,cashRate = 0,Cost=0)
 
 comb = merge.xts(as.xts(port1[,"Total"]),as.xts(port5[,"Total"])); colnames(comb) = c("Long","Short")
 
-#Monthly Returns of the Two Portfolios:
+#Daily Returns of the Two Portfolios:
 ret1 = ROC(port1[,"Total",drop=FALSE]); colnames(ret1) = '1st Quantile'
 ret2 = ROC(port2[,"Total",drop=FALSE]); colnames(ret2) = '2nd Quantile'
 ret3 = ROC(port3[,"Total",drop=FALSE]); colnames(ret3) = '3rd Quantile'
 ret4 = ROC(port4[,"Total",drop=FALSE]); colnames(ret4) = '4th Quantile'
 ret5 = ROC(port5[,"Total",drop=FALSE]); colnames(ret5) = '5th Quantile'
+
+#Monthly Nav:
+monthly_nav1 = port1[endpoints(port1),"Total",drop=FALSE]
+monthly_nav2 = port2[endpoints(port2),"Total",drop=FALSE]
+monthly_nav3 = port3[endpoints(port3),"Total",drop=FALSE]
+monthly_nav4 = port4[endpoints(port4),"Total",drop=FALSE]
+monthly_nav5 = port5[endpoints(port5),"Total",drop=FALSE]
+
+#Monthly Returns:
+monthly_ret1 = ROC(monthly_nav1[,"Total",drop=FALSE]); colnames(monthly_ret1) = '1st Quantile'
+monthly_ret2 = ROC(monthly_nav2[,"Total",drop=FALSE]); colnames(monthly_ret2) = '2nd Quantile'
+monthly_ret3 = ROC(monthly_nav3[,"Total",drop=FALSE]); colnames(monthly_ret3) = '3rd Quantile'
+monthly_ret4 = ROC(monthly_nav4[,"Total",drop=FALSE]); colnames(monthly_ret4) = '4th Quantile'
+monthly_ret5 = ROC(monthly_nav5[,"Total",drop=FALSE]); colnames(monthly_ret5) = '5th Quantile'
 
 #Create Long and Short Portfolio Monthly Returns:
 long.ret = ret1
@@ -62,35 +99,51 @@ short.ret = -ret5
 ```
 
 #### Quantiles
-```{r}
-charts.PerformanceSummary(cbind(ret1,ret2,ret3,ret4,ret5))
-table.AnnualizedReturns(cbind(ret1,ret2,ret3,ret4,ret5))
+
+Performance results for the differernt quantiles based on `r Momentum.period` month(s) momentum with equal weights and a rebalancing period of `r Rebalancing.period` month(s) and holding period of `r Rebalancing.period` month(s).
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+clrs = rainbow(5)
+
+charts.PerformanceSummary(cbind(monthly_ret1,monthly_ret2,monthly_ret3,monthly_ret4,monthly_ret5),
+                          colorset = clrs)
+
+kable(table.AnnualizedReturns(cbind(monthly_ret1,monthly_ret2,monthly_ret3,monthly_ret4,monthly_ret5))) %>% kable_styling("striped")
 ```
 
+\newpage
 
 #### 1st Quantile vs 5th Quantile
-```{r}
-charts.PerformanceSummary(cbind(ret1,ret5),colorset=rich6equal)
-table.AnnualizedReturns(cbind(ret1,ret5))
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+charts.PerformanceSummary(cbind(monthly_ret1,monthly_ret5),colorset=c(clrs[1],clrs[5]))
 
-table.CalendarReturns(cbind(ret1))
-table.CalendarReturns(cbind(ret5))
+kable(table.AnnualizedReturns(cbind(monthly_ret1,monthly_ret5)),caption = "Summary Stats") %>%   kable_styling(c("striped"))
+
+kable(table.CalendarReturns(cbind(monthly_ret1)),caption = "1st Quantile Calendar Returns") %>% 
+  kable_styling(c("striped"))
+
+kable(table.CalendarReturns(cbind(monthly_ret5)),caption = "5th Quantile Calendar Returns") %>% 
+  kable_styling(c("striped"))
 ```
 
+The following is performance results from a portfolio of 50% the 1st Quantile portfolio and 50% short the 5th Quantile portfolio. The results assume that the porfolio is rebalanced monthly back to the 50/50 weighting with no transaction costs.
+
 #### Long-Short 50/50
-```{r}
-LongShort.ret = 0.5*ret1 -0.5*ret5
+```{r echo=FALSE, warning=FALSE}
+
+#Daily Rebalancing:
+LongShort.ret = 0.5*monthly_ret1 -0.5*monthly_ret5
 
 charts.PerformanceSummary(LongShort.ret)
 
-table.CalendarReturns(LongShort.ret)
-table.AnnualizedReturns(LongShort.ret)
+kable(table.CalendarReturns(LongShort.ret),booktabs=T,caption = "Long Short Portolio Calendar Returns") %>% 
+  kable_styling(c("striped"))
+kable(table.AnnualizedReturns(LongShort.ret),booktabs=T,caption = "Risk and Return Summary") %>% 
+  kable_styling("striped")
 ```
 
 
-
-
-```{r}
+```{r eval=FALSE, warning=FALSE, include=FALSE}
 #Cummulative Returns for the Long and Short Portfolio:
 long = long.ret
 short = short.ret
@@ -105,5 +158,69 @@ LongShort.ret = ROC(LongShort)
 
 #Chart Output:
 charts.PerformanceSummary(LongShort.ret)
+```
+
+
+```{r}
+#Optimization:
+
+formation_periods = c(1,3,6,9,12)
+holding_periods = c(1,3,6,9,12)
+
+annual_returns = matrix(NA, nrow=length(formation_periods),ncol = length(holding_periods))
+colnames(annual_returns) = rownames(annual_returns) = as.character(formation_periods)
+standar_deviations = annual_returns
+sharpe_ratios = annual_returns
+
+
+for(f in formation_periods) for(h in holding_periods) {
+  
+  #Portfolio Weights:
+  portfolios = MoM_strat(SP500,f,h ,h,"2007-05-31")
+  
+  #Run The Backtest on the different quantile portfolios:
+  port1 = runBacktest(portfolios[,,1],SP500,1000000,cashRate = 0.05,Cost=0.0050)
+  port5 = runBacktest(portfolios[,,5],SP500,1000000,cashRate = 0.05,Cost=0.0050)
+  
+  #Month End Navs:
+  monthly_nav1 = port1[endpoints(port1),"Total",drop=FALSE]
+  monthly_nav5 = port5[endpoints(port5),"Total",drop=FALSE]
+  
+  #Monthly Returns:
+  monthly_ret1 = ROC(monthly_nav1[,"Total",drop=FALSE]); colnames(monthly_ret1) = '1st Quantile'
+  monthly_ret5 = ROC(monthly_nav5[,"Total",drop=FALSE]); colnames(monthly_ret5) = '5th Quantile'
+  
+  annual_returns[as.character(f),as.character(h)] = as.numeric(Return.annualized(monthly_ret1))
+  standar_deviations[as.character(f),as.character(h)] = as.numeric(StdDev.annualized(monthly_ret1))
+  sharpe_ratios[as.character(f),as.character(h)] = as.numeric(SharpeRatio.annualized(monthly_ret1))
+  
+}
+```
+
+```{r}
+
+melted_sharpe_ratios = melt(sharpe_ratios)
+
+melted_sharpe_ratios$Var1 = factor(melted_sharpe_ratios$Var1,
+                                   levels = unique(sort(melted_sharpe_ratios$Var1)))
+
+melted_sharpe_ratios$Var2 = factor(melted_sharpe_ratios$Var2,
+                                   levels = unique(sort(melted_sharpe_ratios$Var2)))
+
+# melted_sharpe_ratios = melted_sharpe_ratios %>% 
+#   mutate_at(vars(-value),"factor", c("levels"=)) %>% 
+#   arrange(desc(as.numeric(Var1)),desc(as.numeric(Var2)))
+
+
+ggheatmap = ggplot(data = melted_sharpe_ratios, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile() +
+  geom_text(aes(Var1, Var2, label = round(value,2)), color = "black", size = 4) +
+  xlab("Formation Period") +
+  ylab("Holding Period")
+  
+
+ggheatmap
+
+## Utility Functions from CT8
 ```
 

@@ -78,6 +78,7 @@ runBacktest <- function(in.wght,in.close,in.startCapital,cashRate=0.05,Cost=0.00
       if(sum(is.na(in.wght[k,])) < length(in.wght[k,]))
       {
         ## "Improve: Add transaction Costs."
+        ## "Note: Add cost to the price of each security instead. i.e price*(1+Cost)"
         totalCost = sum((as.integer((in.wght[k,uni.pos]*port.out[k,"Total"])/in.close[k,uni.pos]) - num.shares[k,uni.pos])*in.close[k,uni.pos])*Cost
         
         #Execute Changes:
