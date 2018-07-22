@@ -12,6 +12,7 @@
 library(quantmod)
 library(PerformanceAnalytics)
 library(ggplot2)
+library(scales)
 
 getSymbols('AGL.JO')
 
@@ -34,6 +35,9 @@ take_profit = stop_loss
 
 exit_to_enter = TRUE  #TRUE if short exit conditions are the same as long enrty conditions and vice versa.
 
+
+long_entry_cond = "(fastSMA[i] > slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1])"
+short_entry_cond = "(fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])"
 
 for(i in 51:nrow(ts)){
   
@@ -84,7 +88,6 @@ for(i in 51:nrow(ts)){
       
       if((fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])){
         
-        
         if(exit_to_enter){
           #Enter Short Position:
           position[i] = -1
@@ -97,6 +100,8 @@ for(i in 51:nrow(ts)){
       
       }else{
         position[i] = position[i-1]
+        stop_loss[i] = stop_loss[i-1]
+        take_profit[i] = take_profit[i-1]
       }
       
     }
@@ -135,6 +140,8 @@ for(i in 51:nrow(ts)){
         ##IMPROVE: If Exit rule is the same as entry rule for opposite direction, alter accordingly.
       }else{
         position[i] = position[i-1]
+        stop_loss[i] = stop_loss[i-1]
+        take_profit[i] = take_profit[i-1]
       }
       
     }
@@ -147,12 +154,13 @@ for(i in 51:nrow(ts)){
 #Plot Positions:
 plot(position)
 
-pos_df = data.frame(Date = 1:nrow(position),Position = position,check.names = FALSE)
+pos_df = data.frame(Date = index(position),Position = position,check.names = FALSE)
 colnames(pos_df) =c('Date','Position')
 
-ggplot(pos_df,aes(x=Date,y=Position)) +
-  geom_bar(stat='identity')
-#fill = ifelse(pos_df$Position==1,'green','red')
+ggplot(pos_df,aes(x=as.Date(Date),y=Position)) +
+  geom_bar(stat='identity') +
+  scale_x_date(labels=date_format("%b-%Y"))
+  
 
 
 #Performance:
