@@ -1,0 +1,174 @@
+---
+title: "JALSH Momentum Portfolios"
+author: "Paul Nheera"
+date: "28 July 2018"
+output: html_document
+
+---
+
+```{r Load Libraries, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(quantmod)
+library(PerformanceAnalytics)
+library(rvest)
+library(readxl)
+library(readr)
+library(dygraphs)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+
+#install.packages("ggplot2", version='0.9.1')
+#remove.packages('PerformanceAnalytics',lib='C:/Users/Paul Nheera/Documents/R/win-library/3.4')
+#install.packages('PerformanceAnalytics', version='1.4.3541')
+
+source("momentum_strat.R")
+source("portfolio_backtest.R")
+source("~/repos/google-finance-database/Functions/get2D.R")
+```
+
+```{r Load Data, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#Load Data: 2D matrix of prices.
+
+DailyPrice <- readRDS("~/repos/google-finance-database/DailyPrice.rds")
+
+jalsh_adjusted <- get2D(DailyPrice,'Adjusted')
+
+#Data to xts object:
+jalsh_adjusted <- as.xts(jalsh_adjusted[,-1],as.Date(jalsh_adjusted[,1]))
+
+#Clean Data:
+jalsh_adjusted <- na.locf(jalsh_adjusted)
+```
+
+In this document we take a look at the performance and risk characteristics of momentum porfolios based on the sJSE All Share stock universe. The momentum we are concerned with here is the cross-sectional momentum.
+
+#### Input Parameters:
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+look_back = 3 # Months
+holding = 1 # Months
+rebalancing = 1 #Months
+```
+
+Momentum Period: `r look_back` month(s)
+\newline
+Holding period: = `r holding` month(s)
+\newline
+Rebalancing period: = `r rebalancing` month(s)
+\newline
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#Portfolio Weights:
+portfolios = MoM_strat(jalsh_adjusted,look_back,holding ,rebalancing,"2007-05-31")
+
+#Run The Backtest on the different quantile portfolios:
+port1 = runBacktest(portfolios[,,1],jalsh_adjusted,100000,cashRate = 0,Cost=0)
+port2 = runBacktest(portfolios[,,2],jalsh_adjusted,100000,cashRate = 0,Cost=0)
+port3 = runBacktest(portfolios[,,3],jalsh_adjusted,100000,cashRate = 0,Cost=0)
+port4 = runBacktest(portfolios[,,4],jalsh_adjusted,100000,cashRate = 0,Cost=0)
+port5 = runBacktest(portfolios[,,5],jalsh_adjusted,100000,cashRate = 0,Cost=0)
+
+comb = merge.xts(as.xts(port1[,"Total"]),as.xts(port5[,"Total"])); colnames(comb) = c("Long","Short")
+
+#Daily Returns of the Two Portfolios:
+ret1 = ROC(port1[,"Total",drop=FALSE]); colnames(ret1) = '1st Quantile'
+ret2 = ROC(port2[,"Total",drop=FALSE]); colnames(ret2) = '2nd Quantile'
+ret3 = ROC(port3[,"Total",drop=FALSE]); colnames(ret3) = '3rd Quantile'
+ret4 = ROC(port4[,"Total",drop=FALSE]); colnames(ret4) = '4th Quantile'
+ret5 = ROC(port5[,"Total",drop=FALSE]); colnames(ret5) = '5th Quantile'
+
+#Monthly Nav:
+monthly_nav1 = port1[endpoints(port1),"Total",drop=FALSE]
+monthly_nav2 = port2[endpoints(port2),"Total",drop=FALSE]
+monthly_nav3 = port3[endpoints(port3),"Total",drop=FALSE]
+monthly_nav4 = port4[endpoints(port4),"Total",drop=FALSE]
+monthly_nav5 = port5[endpoints(port5),"Total",drop=FALSE]
+
+#Monthly Returns:
+monthly_ret1 = ROC(monthly_nav1[,"Total",drop=FALSE]); colnames(monthly_ret1) = '1st Quantile'
+monthly_ret2 = ROC(monthly_nav2[,"Total",drop=FALSE]); colnames(monthly_ret2) = '2nd Quantile'
+monthly_ret3 = ROC(monthly_nav3[,"Total",drop=FALSE]); colnames(monthly_ret3) = '3rd Quantile'
+monthly_ret4 = ROC(monthly_nav4[,"Total",drop=FALSE]); colnames(monthly_ret4) = '4th Quantile'
+monthly_ret5 = ROC(monthly_nav5[,"Total",drop=FALSE]); colnames(monthly_ret5) = '5th Quantile'
+```
+
+
+#### Quantiles
+
+Performance results for the differernt quantiles based on `r look_back` month(s) momentum with equal weights and a rebalancing period of `r rebalancing` month(s) and holding period of `r holding` month(s).
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+clrs = rainbow(5)
+
+charts.PerformanceSummary(cbind(monthly_ret1,monthly_ret2,monthly_ret3,monthly_ret4,monthly_ret5),
+                          colorset = clrs)
+
+kable(table.AnnualizedReturns(cbind(monthly_ret1,monthly_ret2,monthly_ret3,monthly_ret4,monthly_ret5))) %>% kable_styling("striped")
+```
+
+\newpage
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#Optimization:
+
+formation_periods = c(1,3,6,9,12)
+holding_periods = c(1,3,6,9,12)
+
+annual_returns = matrix(NA, nrow=length(formation_periods),ncol = length(holding_periods))
+colnames(annual_returns) = rownames(annual_returns) = as.character(formation_periods)
+standar_deviations = annual_returns
+sharpe_ratios = annual_returns
+
+
+for(f in formation_periods) for(h in holding_periods) {
+  
+  #Portfolio Weights:
+  portfolios = MoM_strat(jalsh_adjusted,f,h ,h,"2007-05-31")
+  
+  #Run The Backtest on the different quantile portfolios:
+  port1 = runBacktest(portfolios[,,1],jalsh_adjusted,1000000,cashRate = 0.05,Cost=0.0050)
+  port5 = runBacktest(portfolios[,,5],jalsh_adjusted,1000000,cashRate = 0.05,Cost=0.0050)
+  
+  #Month End Navs:
+  monthly_nav1 = port1[endpoints(port1),"Total",drop=FALSE]
+  monthly_nav5 = port5[endpoints(port5),"Total",drop=FALSE]
+  
+  #Monthly Returns:
+  monthly_ret1 = ROC(monthly_nav1[,"Total",drop=FALSE]); colnames(monthly_ret1) = '1st Quantile'
+  monthly_ret5 = ROC(monthly_nav5[,"Total",drop=FALSE]); colnames(monthly_ret5) = '5th Quantile'
+  
+  annual_returns[as.character(f),as.character(h)] = as.numeric(Return.annualized(monthly_ret1))
+  standar_deviations[as.character(f),as.character(h)] = as.numeric(StdDev.annualized(monthly_ret1))
+  sharpe_ratios[as.character(f),as.character(h)] = as.numeric(SharpeRatio.annualized(monthly_ret1))
+  
+}
+```
+
+```{r}
+
+melted_sharpe_ratios = melt(sharpe_ratios)
+
+melted_sharpe_ratios$Var1 = factor(melted_sharpe_ratios$Var1,
+                                   levels = unique(sort(melted_sharpe_ratios$Var1)))
+
+melted_sharpe_ratios$Var2 = factor(melted_sharpe_ratios$Var2,
+                                   levels = unique(sort(melted_sharpe_ratios$Var2)))
+
+# melted_sharpe_ratios = melted_sharpe_ratios %>% 
+#   mutate_at(vars(-value),"factor", c("levels"=)) %>% 
+#   arrange(desc(as.numeric(Var1)),desc(as.numeric(Var2)))
+
+
+ggheatmap = ggplot(data = melted_sharpe_ratios, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile() +
+  geom_text(aes(Var1, Var2, label = round(value,2)), color = "black", size = 4) +
+  xlab("Formation Period") +
+  ylab("Holding Period")
+  
+
+ggheatmap
+
+## Utility Functions from CT8
+```
