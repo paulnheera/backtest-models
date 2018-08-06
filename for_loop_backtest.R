@@ -24,6 +24,7 @@ fastSMA = SMA(Cl(ts),14)
 slowSMA = SMA(Cl(ts),50)
 
 bbands = BBands(Cl(ts),20)
+bbands = cbind(Cl(ts),bbands)
 
 majorSMA = SMA(Cl(ts),200)
 
@@ -33,26 +34,31 @@ position = fastSMA; position[,] = 0
 stop_loss = fastSMA; stop_loss[,] = NA
 take_profit = stop_loss
 
-exit_to_enter = TRUE  #TRUE if short exit conditions are the same as long enrty conditions and vice versa.
+exit_to_enter = FALSE  #TRUE if short exit conditions are the same as long enrty conditions and vice versa.
 
 
 long_entry_cond = "(fastSMA[i] > slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1])"
 short_entry_cond = "(fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])"
 
-for(i in 51:nrow(ts)){
+for_loop_backtest <- function(OHLC="",Indicator=""){
+  
+  #ts = OHLC
+  #bbands = Indicator
+  
+  for(i in (n+1):nrow(ts)){
   
   #---- Check for Open:----
   if(position[i-1] == 0){ #If there was no position open:
     
     #Strategy rule: Open Long
-    if((fastSMA[i] > slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1])){
+    if((bbands[i,'dn'] > Cl(ts)[i]) && (bbands[i-1,'dn'] < Cl(ts)[i-1])){
       position[i] = 1
       stop_loss[i] = NA
       take_profit[i] = NA  
       ##IMPROVE: Make the 3 Statements a method that can be run when closing a short position.
                         
     #Strategy rule: Open Short  
-    }else if((fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])){
+    }else if((bbands[i,'up'] < Cl(ts)[i]) && (bbands[i-1,'up'] > Cl(ts)[i-1])){
       ##IMPROVE: (TEST SENSITIVITY) fastSMA[i] < slowSMA[i] && lag(fastSMA,1)[i] > lag(fastSMA,1)[i]
       ##REASONING: This allows flexibility in the amount of variables checked in conditions.
       ## i.e if condition is based on the previous n bars.
@@ -86,7 +92,7 @@ for(i in 51:nrow(ts)){
       
     }else { #Check for Exit Rule:
       
-      if((fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])){
+      if((bbands[i,'mavg'] > Cl(ts)[i]) && (bbands[i-1,'mavg'] < Cl(ts)[i-1])){
         
         if(exit_to_enter){
           #Enter Short Position:
@@ -127,7 +133,7 @@ for(i in 51:nrow(ts)){
       
     }else{ #Check for Exit Rule:
       
-      if((fastSMA[i] > slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1])){
+      if((bbands[i,'mavg'] <= Cl(ts)[i]) && (bbands[i-1,'mavg'] > Cl(ts)[i-1])){
         
         if(exit_to_enter){
           #Enter Long Position:
@@ -148,8 +154,30 @@ for(i in 51:nrow(ts)){
     
   }
   #----
+  }
+  
+  ret = ROC(Cl(ts))
+  
+  strat_ret = ret*lag(position) 
+
+  retable.AnnualizedReturns(strat_ret)[3,]
 }
 
+
+#---- Optimization ----
+N <- seq(5,100,by=5)
+
+sharpe_ratios <- data.frame(look_back = N,`Sharpe Ratio`=NA,
+                            check.names = FALSE)
+
+for(n in N){
+  bbands = BBands(Cl(ts),n)
+  
+  for_loop_backtest()
+  
+  sharpe_ratios[which(N == n),2] = for_loop_backtest()
+  
+}
 
 #Plot Positions:
 plot(position)
