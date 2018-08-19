@@ -9,6 +9,7 @@
 #trade
 #trade_filter ???
 
+#---- Load Libraries ----
 library(quantmod)
 library(PerformanceAnalytics)
 library(ggplot2)
@@ -40,6 +41,9 @@ exit_to_enter = FALSE  #TRUE if short exit conditions are the same as long enrty
 long_entry_cond = "(fastSMA[i] > slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1])"
 short_entry_cond = "(fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])"
 
+long_filter = SMA(Cl(ts),200) < SMA(Cl(ts),100)
+short_filter = SMA(Cl(ts),200) > SMA(Cl(ts),100)
+
 for_loop_backtest <- function(OHLC="",Indicator=""){
   
   #ts = OHLC
@@ -51,14 +55,14 @@ for_loop_backtest <- function(OHLC="",Indicator=""){
   if(position[i-1] == 0){ #If there was no position open:
     
     #Strategy rule: Open Long
-    if((bbands[i,'dn'] > Cl(ts)[i]) && (bbands[i-1,'dn'] < Cl(ts)[i-1])){
+    if((bbands[i,'dn'] > Cl(ts)[i]) && (bbands[i-1,'dn'] < Cl(ts)[i-1]) && long_filter[i]){
       position[i] = 1
       stop_loss[i] = NA
       take_profit[i] = NA  
       ##IMPROVE: Make the 3 Statements a method that can be run when closing a short position.
                         
     #Strategy rule: Open Short  
-    }else if((bbands[i,'up'] < Cl(ts)[i]) && (bbands[i-1,'up'] > Cl(ts)[i-1])){
+    }else if((bbands[i,'up'] < Cl(ts)[i]) && (bbands[i-1,'up'] > Cl(ts)[i-1]) && short_filter[i]){
       ##IMPROVE: (TEST SENSITIVITY) fastSMA[i] < slowSMA[i] && lag(fastSMA,1)[i] > lag(fastSMA,1)[i]
       ##REASONING: This allows flexibility in the amount of variables checked in conditions.
       ## i.e if condition is based on the previous n bars.
@@ -154,13 +158,14 @@ for_loop_backtest <- function(OHLC="",Indicator=""){
     
   }
   #----
+    
   }
   
   ret = ROC(Cl(ts))
   
   strat_ret = ret*lag(position) 
 
-  retable.AnnualizedReturns(strat_ret)[3,]
+  table.AnnualizedReturns(strat_ret)[3,]
 }
 
 
