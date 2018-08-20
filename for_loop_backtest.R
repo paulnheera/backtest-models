@@ -14,17 +14,20 @@ library(quantmod)
 library(PerformanceAnalytics)
 library(ggplot2)
 library(scales)
+source('getSymbol_MT4.R')
 
 getSymbols('AGL.JO')
 
 ts = na.locf(AGL.JO)
+ts = getSymbol.MT4('EURUSD',15)
+
 
 adj_ts = ts; adj_ts[,] = NA  #To be replaced with hit stop losses and target profits
 
 fastSMA = SMA(Cl(ts),14)
 slowSMA = SMA(Cl(ts),50)
 
-bbands = BBands(Cl(ts),20)
+bbands = BBands(Cl(ts),10,sd=1.5)
 bbands = cbind(Cl(ts),bbands)
 
 majorSMA = SMA(Cl(ts),200)
@@ -41,8 +44,8 @@ exit_to_enter = FALSE  #TRUE if short exit conditions are the same as long enrty
 long_entry_cond = "(fastSMA[i] > slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1])"
 short_entry_cond = "(fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])"
 
-long_filter = SMA(Cl(ts),200) < SMA(Cl(ts),100)
-short_filter = SMA(Cl(ts),200) > SMA(Cl(ts),100)
+long_filter = TRUE#SMA(Cl(ts),200) < SMA(Cl(ts),100)
+short_filter = TRUE#SMA(Cl(ts),200) > SMA(Cl(ts),100)
 
 for_loop_backtest <- function(OHLC="",Indicator=""){
   

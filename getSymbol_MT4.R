@@ -6,7 +6,7 @@ library(quantmod)
 getSymbol.MT4 <- function(symbol,timeframe){
   
 
-  file = paste0("MT4 Data/Dump/",symbol,timeframe,".csv")
+  file = paste0("MT4 Data/",symbol,timeframe,".csv")
   
   temp = read_csv(file,
                   col_names = c('Date','Time','Open','High','Low','Close','Volume'))
