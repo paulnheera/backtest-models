@@ -14,28 +14,31 @@ library(quantmod)
 library(PerformanceAnalytics)
 library(ggplot2)
 library(scales)
+library(readr)
 source('getSymbol_MT4.R')
 
-getSymbols('AGL.JO')
 
-ts = na.locf(AGL.JO)
-ts = getSymbol.MT4('EURUSD',15)
+#---- Market Data ----
+
+ts <- getSymbol.MT4('EURUSD',1440)
 
 
-adj_ts = ts; adj_ts[,] = NA  #To be replaced with hit stop losses and target profits
+#---- Indicators ----
 
+#Simple Moving Average:
 fastSMA = SMA(Cl(ts),14)
 slowSMA = SMA(Cl(ts),50)
 
-bbands = BBands(Cl(ts),10,sd=1.5)
+#Bollinger Bands:
+bbands = BBands(Cl(ts),20,sd=1.5)
 bbands = cbind(Cl(ts),bbands)
 
 majorSMA = SMA(Cl(ts),200)
 
 trade_filter = NA
 
-position = fastSMA; position[,] = 0
-stop_loss = fastSMA; stop_loss[,] = NA
+position = Cl(ts); position[,] = 0 ;colnames(position) = "position"
+stop_loss = position; stop_loss[,] = NA
 take_profit = stop_loss
 
 exit_to_enter = FALSE  #TRUE if short exit conditions are the same as long enrty conditions and vice versa.
@@ -44,8 +47,12 @@ exit_to_enter = FALSE  #TRUE if short exit conditions are the same as long enrty
 long_entry_cond = "(fastSMA[i] > slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1])"
 short_entry_cond = "(fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])"
 
-long_filter = TRUE#SMA(Cl(ts),200) < SMA(Cl(ts),100)
-short_filter = TRUE#SMA(Cl(ts),200) > SMA(Cl(ts),100)
+long_filter =  Cl(ts); long_filter[,] = TRUE 
+long_filter <- SMA(Cl(ts),200) < SMA(Cl(ts),100)
+short_filter <- SMA(Cl(ts),200) > SMA(Cl(ts),100)
+short_filter =  Cl(ts); short_filter[,] = TRUE#SMA(Cl(ts),200) > SMA(Cl(ts),100)
+
+#---- Backtest ----
 
 for_loop_backtest <- function(OHLC="",Indicator=""){
   
@@ -166,11 +173,44 @@ for_loop_backtest <- function(OHLC="",Indicator=""){
   
   ret = ROC(Cl(ts))
   
-  strat_ret = ret*lag(position) 
+  strat_ret = ret*lag(-position) 
 
   table.AnnualizedReturns(strat_ret)[3,]
 }
 
+
+#---- Visualization: Positions ----
+
+#Subset Period:
+from = "2017-01-01"
+to = "2017-12-31"
+
+start_ind <-  min(which(trades$start > from))
+end_ind <- max(which(trades$start < to))
+
+#Arrange Data:
+g_ts <- ts[paste0(from,"::",to)]
+gdata <- data.frame(Time = as.POSIXct(index(g_ts)),g_ts)
+
+
+#Plot Graph:
+ggplot() +
+  geom_rect(data = trades[start_ind:end_ind,], aes(xmin = start, xmax = end, 
+                              ymin = -Inf, ymax = Inf),
+            fill = ifelse(trades[start_ind:end_ind,'position'] < 0,'red','green'),
+            alpha = 0.2) +
+  geom_line(data=gdata,aes(x=Time,y=Close),size=0.8,colour='blue')
+  
+#---- Visualization: Performance ----
+strat_cumret <- cumprod(1+na.trim(strat_ret)) - 1
+
+gdata <- data.frame(Time = index(strat_cumret),strat_cumret)
+
+ggplot(gdata,aes(x=as.Date(Time),y=Close)) +
+  geom_line(colour='blue',size=0.8) +
+  scale_x_date(date_breaks = "5 years",date_labels = '%Y') +
+  ylab('Cumulative Return') +
+  xlab('Date')
 
 #---- Optimization ----
 N <- seq(5,100,by=5)
@@ -188,7 +228,7 @@ for(n in N){
 }
 
 #Plot Positions:
-plot(position)
+plot(position,type='l')
 
 pos_df = data.frame(Date = index(position),Position = position,check.names = FALSE)
 colnames(pos_df) =c('Date','Position')
