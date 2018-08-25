@@ -3,11 +3,11 @@
 #TS      (Market Data)
 #fastSMA (Indicator)
 #slowSMA (Indicator)
-#position
-#take_profit
-#stop_loss
-#trade
-#trade_filter ???
+#position (Trade Info)
+#take_profit (Trade Info)
+#stop_loss (Trade Info)
+#trades (Trade Info)
+#trade_filter (Indicator)
 
 #---- Load Libraries ----
 library(quantmod)
@@ -203,12 +203,13 @@ ggplot() +
   
 #---- Visualization: Performance ----
 strat_cumret <- cumprod(1+na.trim(strat_ret)) - 1
+drawdowns <- Drawdowns(strat_ret)
 
 gdata <- data.frame(Time = index(strat_cumret),strat_cumret)
 
-ggplot(gdata,aes(x=as.Date(Time),y=Close)) +
+ggplot(gdata,aes(x=Time,y=Close)) +
   geom_line(colour='blue',size=0.8) +
-  scale_x_date(date_breaks = "5 years",date_labels = '%Y') +
+  scale_x_datetime(date_breaks = "5 years",date_labels = '%b \n %Y') +
   ylab('Cumulative Return') +
   xlab('Date')
 
