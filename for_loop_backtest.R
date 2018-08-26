@@ -21,7 +21,7 @@ source('trades_function.R')
 
 #---- Market Data ----
 
-ts <- getSymbol.MT4('EURUSD',1440)
+ts <- getSymbol.MT4('EURUSD',15)
 
 
 #---- Indicators ----
