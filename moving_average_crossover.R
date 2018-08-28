@@ -15,8 +15,10 @@ library(PerformanceAnalytics)
 library(ggplot2)
 library(scales)
 library(readr)
+library(candlesticks)
 source('getSymbol_MT4.R')
 source('trades_function.R')
+source("~/repos/Drafts/TrendDetectionChannel2.R")
 
 
 #---- Market Data ----
@@ -27,8 +29,8 @@ ts <- getSymbol.MT4('EURUSD',15)
 #---- Indicators ----
 
 #Simple Moving Average:
-fastSMA = SMA(Cl(ts),14)
-slowSMA = SMA(Cl(ts),50)
+fastSMA = SMA(Cl(ts),5)
+slowSMA = SMA(Cl(ts),14)
 
 #Bollinger Bands:
 bbands = BBands(Cl(ts),12,sd=2)
@@ -36,6 +38,14 @@ bbands = cbind(Cl(ts),bbands)
 
 #Relative Strength Index:
 rsi <- RSI(Cl(ts))
+
+#14 bar High/Low:
+n_high <- lag(runMax(Cl(ts),14))
+n_low <- lag(runMin(Cl(ts),14))
+
+#Candlesick patterns:
+MorningStar = CSPStar(ts)[,"MorningStar"] & TrendDetectionChannel2(ts,n=14)[,"DownTrend"]
+EveningStar  = CSPStar(ts)[,"EveningStar"] & TrendDetectionChannel2(ts,n=14)[,"UpTrend"]
 
 #---- Inittialize Trade info Objects ----
 position = Cl(ts); position[,] = 0 ;colnames(position) = "position"
@@ -57,22 +67,22 @@ n = 100
 #---- Backtest ----
 
 #for_loop_backtest <- function(OHLC="",Indicator=""){
-  
-  for(i in (n+1):nrow(ts)){
+
+for(i in (n+1):nrow(ts)){
   
   #---- Check for Open:----
   if(position[i-1] == 0){ #If there was no position open:
     
     #Strategy rule: Open Long!
-    if((bbands[i,'dn'] > Cl(ts)[i]) && (bbands[i-1,'dn'] < Cl(ts)[i-1]) && long_filter[i]){
+    if((fastSMA[i]>slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1]) && long_filter[i]){
       position[i] = 1
       stop_loss[i] = NA
       take_profit[i] = NA  
       ##IMPROVE: Make the 3 Statements a method that can be run when closing a short position.
       ##This would be for the case where conditions for opening short are the same as closing long.
-                        
-    #Strategy rule: Open Short! 
-    }else if((bbands[i,'up'] < Cl(ts)[i]) && (bbands[i-1,'up'] > Cl(ts)[i-1]) && short_filter[i]){
+      
+      #Strategy rule: Open Short! 
+    }else if((fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1]) && short_filter[i]){
       ##IMPROVE: (TEST SENSITIVITY) fastSMA[i] < slowSMA[i] && lag(fastSMA,1)[i] > lag(fastSMA,1)[i]
       ##REASONING: This allows flexibility in the amount of variables checked in conditions.
       ## i.e if condition is based on the previous n bars.
@@ -80,7 +90,7 @@ n = 100
       stop_loss[i] = NA
       take_profit[i] = NA
       
-    #Do nothing:
+      #Do nothing:
     }else{
       position[i] = position[i-1]
     }
@@ -106,7 +116,7 @@ n = 100
       
     }else { #Check for Exit Rule:
       
-      if((bbands[i,'mavg'] > Cl(ts)[i]) && (bbands[i-1,'mavg'] < Cl(ts)[i-1])){
+      if((fastSMA[i] < slowSMA[i]) && (fastSMA[i-1] > slowSMA[i-1])){
         
         if(exit_to_enter){
           #Enter Short Position:
@@ -117,7 +127,7 @@ n = 100
           position[i] = 0
         }
         ##IMPROVE: If Exit rule is the same as entry rule for opposite direction, alter accordingly.
-      
+        
       }else{
         position[i] = position[i-1]
         stop_loss[i] = stop_loss[i-1]
@@ -147,7 +157,7 @@ n = 100
       
     }else{ #Check for Exit Rule:
       
-      if((bbands[i,'mavg'] <= Cl(ts)[i]) && (bbands[i-1,'mavg'] > Cl(ts)[i-1])){
+      if((fastSMA[i] > slowSMA[i]) && (fastSMA[i-1] < slowSMA[i-1])){
         
         if(exit_to_enter){
           #Enter Long Position:
@@ -168,30 +178,37 @@ n = 100
     
   }
   #----
-    
-  }
   
-  #Return Stream:
-  ret = ROC(Cl(ts))
-  
-  #Strategy Returns:
-  strat_ret = ret*lag(position) 
-  
-  #Table of summary stats:
-  table.AnnualizedReturns(strat_ret)[3,]
-  
+}
+
+#Return Stream:
+ret = ROC(Cl(ts))
+
+#Strategy Returns:
+strat_ret = ret*lag(position) 
+
+#Table of summary stats:
+table.AnnualizedReturns(strat_ret)[3,]
+
 #Return: Positions & Strategy Returns
 
 #}
 
-  
+
 #---- Trades ----
 trades <- get_trades(position)
+
+trades2 <- trades %>% 
+  mutate(PnL = NA)
+
+for(j in 1:nrow(trades2)){
+  trades2$PnL[j] <- Return.cumulative(strat_ret[paste0(trades2$start[j],'::',trades2$end[j])])
+}
 
 #---- Visualization: Positions ----
 
 #Subset Period:
-from = "2018-01-01"
+from = "2018-05-01"
 to = "2018-12-31"
 
 start_ind <-  min(which(trades$start > from))
@@ -204,13 +221,13 @@ gdata <- data.frame(Time = as.POSIXct(index(g_ts)),g_ts)
 #Plot Graph:
 ggplot() +
   geom_rect(data = trades[start_ind:end_ind,], aes(xmin = start, xmax = end, 
-                              ymin = -Inf, ymax = Inf),
+                                                   ymin = -Inf, ymax = Inf),
             fill = ifelse(trades[start_ind:end_ind,'position'] < 0,'red','green'),
             alpha = 0.2) +
   geom_line(data=gdata,aes(x=Time,y=Close),size=0.8,colour='blue')
 
 #---- Visualization: With Indicators ----
-  
+
 #---- Visualization: Performance ----
 strat_cumret <- cumprod(1+na.trim(strat_ret)) - 1
 
