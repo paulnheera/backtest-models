@@ -15,6 +15,7 @@ library(PerformanceAnalytics)
 library(ggplot2)
 library(scales)
 library(readr)
+library(bdscale)
 source('getSymbol_MT4.R')
 source('trades_function.R')
 
@@ -202,6 +203,7 @@ g_ts <- ts[paste0(from,"::",to)]
 gdata <- data.frame(Time = as.POSIXct(index(g_ts)),g_ts)
 
 #Plot Graph:
+##IMPROVE: Plot Candlestick chart without gaps (on weekends.)
 ggplot() +
   geom_rect(data = trades[start_ind:end_ind,], aes(xmin = start, xmax = end, 
                               ymin = -Inf, ymax = Inf),
@@ -218,9 +220,10 @@ drawdowns <- Drawdowns(strat_ret)
 
 gdata <- data.frame(Time = index(strat_cumret),strat_cumret)
 
+##IMRPOVE:: Make date_brakes dynamic and dependent on data time-frame.
 ggplot(gdata,aes(x=Time,y=Close)) +
   geom_line(colour='blue',size=0.8) +
-  scale_x_datetime(date_breaks = "5 years",date_labels = '%b \n %Y') +
+  scale_x_datetime(date_breaks = "1 years",date_labels = '%b \n %Y') +
   ylab('Cumulative Return') +
   xlab('Date')
 
